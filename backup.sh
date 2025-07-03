@@ -1,41 +1,39 @@
 #!/bin/bash
-# backup.sh - Manual Backup Script
+
+set -e
 
 INSTALL_DIR="/opt/Pi-Backup-Installer"
 CONFIG_FILE="$INSTALL_DIR/config/settings.conf"
-NAS_CREDENTIALS="$INSTALL_DIR/credentials/nas_creds"
+CREDENTIALS_FILE="$INSTALL_DIR/credentials/nas_creds"
+MOUNT_POINT="/mnt/backup"
+DATE=$(date +"%Y-%m-%d_%H-%M-%S")
+BACKUP_FILENAME="backup_$DATE.img.gz"
+NAS_TARGET_PATH="$MOUNT_POINT/$BACKUP_FILENAME"
 
-# Load configuration
-if [ -f "$CONFIG_FILE" ]; then
-  source "$CONFIG_FILE"
-else
-  echo "⚠️ Configuration file not found at $CONFIG_FILE"
+# Load settings
+source "$CONFIG_FILE"
+
+# Read credentials securely
+if [[ ! -r "$CREDENTIALS_FILE" ]]; then
+  echo "❌ Missing or unreadable NAS credentials at $CREDENTIALS_FILE"
   exit 1
 fi
 
-# Load NAS credentials
-if [ -f "$NAS_CREDENTIALS" ]; then
-  source "$NAS_CREDENTIALS"
-else
-  echo "⚠️ NAS credentials file not found at $NAS_CREDENTIALS"
-  exit 1
-fi
-
-# Create backup directory
-BACKUP_DIR="/mnt/backup"
-mkdir -p "$BACKUP_DIR"
+source "$CREDENTIALS_FILE"
 
 # Mount NAS share
-mount -t cifs -o username="$NAS_USER",password="$NAS_PASS" "//${NAS_IP}/${NAS_SHARE}" "$BACKUP_DIR"
-if [ $? -ne 0 ]; then
-  echo "❌ Failed to mount NAS share"
-  exit 1
-fi
+echo "🔗 Mounting NAS share at $MOUNT_POINT..."
+sudo mkdir -p "$MOUNT_POINT"
+sudo mount -t cifs "//$NAS_IP/$NAS_SHARE" "$MOUNT_POINT" \
+  -o username="$username",password="$password",rw,vers=3.0,uid=$(id -u),gid=$(id -g)
 
-# Perform the backup (example: copying files)
-rsync -av --delete / "$BACKUP_DIR/backup_$(date +%Y%m%d%H%M%S)"
+# Backup directly to NAS
+echo "💾 Creating SD card backup directly to NAS..."
+sudo dd if=/dev/mmcblk0 bs=4M status=progress conv=fsync | gzip > "$NAS_TARGET_PATH"
 
-# Unmount NAS share
-umount "$BACKUP_DIR"
+# Unmount
+echo "🔌 Unmounting NAS share..."
+sudo umount "$MOUNT_POINT"
 
-echo "✅ Backup completed successfully"
+echo "✅ Backup complete: $NAS_TARGET_PATH"
+read -rp "Press Enter to continue..."
