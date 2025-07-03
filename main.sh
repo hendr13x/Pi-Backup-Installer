@@ -7,23 +7,19 @@ CONFIG_FILE="$INSTALL_DIR/config/settings.conf"
 # Load config
 source "$CONFIG_FILE"
 
-# Function: get last backup file date
 get_last_backup_date() {
   latest_file=$(ls -t "$BACKUP_DIR"/*.img.gz 2>/dev/null | head -n 1)
   [[ -n "$latest_file" ]] && date -r "$latest_file" || echo "No backups yet"
 }
 
-# Function: count existing backups
 get_backup_count() {
   find "$BACKUP_DIR" -name "*.img.gz" 2>/dev/null | wc -l
 }
 
-# Function: total disk usage by backup folder
 get_backup_size() {
   du -sh "$BACKUP_DIR" 2>/dev/null | cut -f1
 }
 
-# Function: check next scheduled auto-backup time (if enabled)
 get_next_backup_time() {
   if [[ "$AUTO_BACKUP_ENABLED" == "yes" ]]; then
     systemctl list-timers --all | grep sdcard-backup.timer | awk '{print $1, $2, $3}' || echo "Unknown"
@@ -37,7 +33,6 @@ kiauh_installed=false
 [ -x "$KIAUH_PATH/kiauh.sh" ] && kiauh_installed=true
 
 while true; do
-  # Refresh data on each loop
   last_backup=$(get_last_backup_date)
   backup_count=$(get_backup_count)
   backup_size=$(get_backup_size)
@@ -53,17 +48,14 @@ while true; do
   echo "────────────────────────────────────"
   echo
   echo "1) SD Card Backup Utility"
-
   if $kiauh_installed; then
     echo "2) Run Kiauh (Klipper Installation And Update Helper)"
   else
     echo "2) Install Kiauh (Klipper Installation And Update Helper)"
   fi
-
   echo "3) Option 3 (Coming Soon)"
   echo "q) Exit to Terminal"
   echo
-
   read -rp "Enter choice: " choice
 
   case "$choice" in
@@ -91,7 +83,6 @@ while true; do
       ;;
     q|Q)
       echo "Returning to terminal..."
-      # Run MOTD if available
       if [ -d /etc/update-motd.d ]; then
         run-parts /etc/update-motd.d
       fi
