@@ -57,16 +57,18 @@ chmod +x "$INSTALL_DIR"/*.sh
 echo "$(whoami) ALL=(ALL) NOPASSWD: $INSTALL_DIR/backup_sdcard.sh" | sudo tee /etc/sudoers.d/sdcard-backup > /dev/null
 sudo chmod 0440 /etc/sudoers.d/sdcard-backup
 
-# Setup SSH login UI system-wide using /etc/profile.d
-cat << EOF | sudo tee /etc/profile.d/sdcard_backup_ui.sh > /dev/null
-## backup-ui-start
-if [[ -n "\$SSH_TTY" ]]; then
-  bash "$INSTALL_DIR/main.sh"
-  exit
+# Setup SSH login UI (for all users, modify /etc/profile.d/backup-ui.sh)
+# This way, it runs for every user who logs in interactively
+sudo tee /etc/profile.d/backup-ui.sh > /dev/null << EOF
+#!/bin/bash
+if [[ -n "\$SSH_TTY" && -z "\$SKIP_BACKUP_UI" ]]; then
+  # Run menu script, if exists
+  if [ -x "$INSTALL_DIR/main.sh" ]; then
+    "$INSTALL_DIR/main.sh"
+  fi
 fi
-## backup-ui-end
 EOF
 
-sudo chmod +x /etc/profile.d/sdcard_backup_ui.sh
+sudo chmod +x /etc/profile.d/backup-ui.sh
 
 echo "✅ Installation complete. Reconnect via SSH to see the menu."
