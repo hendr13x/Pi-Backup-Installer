@@ -1,62 +1,70 @@
 # Pi-Backup-Installer
 
-A simple backup UI and utility installer for Armbian-based SBCs like BigTreeTech CB1.
+**A simple SD Card backup utility with integrated menu UI for BigTreeTech CB1 and similar devices.**
 
 ---
 
 ## Features
 
-- Installs the backup scripts and UI to a global shared location:  
-  `/opt/Pi-Backup-Installer`  
-  This allows all users on the system to use the backup utility without multiple installs.
-
-- Sets up a login UI menu that launches automatically on SSH login for all users via `/etc/profile.d/backup-ui.sh`.
-
-- Per-user detection of **Kiauh** (Klipper Installation And Update Helper):  
-  - If `~/kiauh/kiauh.sh` exists and is executable, the UI menu shows the option to launch Kiauh.  
-  - On first SSH login for each user, if Kiauh is not installed, they are prompted whether to install Kiauh into their home directory.
-
-- Backup UI exits cleanly back to the standard terminal prompt and runs the usual MOTD (message of the day).
-
-- Automatic installation of necessary dependencies (`git`, `cifs-utils`).
+- Shared installation under `/opt/Pi-Backup-Installer` for all users.
+- Backup status shown at SSH login via a clean menu interface.
+- Automatically detects and shows backup info: last backup date, total backups, disk usage, and next scheduled auto-backup.
+- Option to launch the SD Card Backup Utility or (if installed) run Kiauh (Klipper Installation And Update Helper).
+- Per-user prompt on first SSH login to optionally install Kiauh under their home directory (`~/kiauh`).
+- Clean exit back to terminal with MOTD re-run on menu quit.
 
 ---
 
 ## Installation
 
-Run the installer as root (or via sudo):
+Run the following commands **as root** to install or update Pi-Backup-Installer:
 
 ```bash
-git clone https://github.com/hendr13x/Pi-Backup-Installer.git /opt/Pi-Backup-Installer
-cd /opt/Pi-Backup-Installer
-chmod +x installer.sh
-./installer.sh
-This will:
+# Clone or update repository in /opt
+if [ ! -d /opt/Pi-Backup-Installer ]; then
+  git clone https://github.com/hendr13x/Pi-Backup-Installer.git /opt/Pi-Backup-Installer
+else
+  cd /opt/Pi-Backup-Installer
+  git fetch origin
+  git reset --hard origin/main
+fi
 
-Install or update the backup scripts in /opt/Pi-Backup-Installer.
+# Make scripts executable
+chmod +x /opt/Pi-Backup-Installer/installer.sh
+chmod +x /opt/Pi-Backup-Installer/main.sh
 
-Configure /etc/profile.d/backup-ui.sh to launch the menu UI on SSH login for all users.
+# Run the installer script
+/opt/Pi-Backup-Installer/installer.sh
 
-Setup permissions and sudoers rules for backup scripts.
+## This will:
 
-Create default config and credential files if missing.
+Install/update the backup utility to /opt/Pi-Backup-Installer
 
-Enable auto backup timer if configured.
+Set up the login UI for all users in /etc/profile.d/backup-ui.sh
 
-Add prompt for per-user Kiauh installation on their first login.
+Create backup directories and config files
 
-## Usage
-When users SSH into the system, the backup UI menu will appear automatically.
+Enable per-user Kiauh install prompt on first login
 
-Select options to run the SD Card Backup Utility or, if Kiauh is installed in the user’s home, launch Kiauh.
+## Using the Backup UI
+SSH into your device with any user.
 
-Pressing q exits the menu cleanly back to the normal shell prompt and displays the standard MOTD.
+On login, you will see the backup UI menu showing your current backup status.
 
-Kiauh installation is per-user and stored under each user’s ~/kiauh directory.
+If Kiauh is not installed in your home directory (~/kiauh), you will be prompted whether to install it.
 
-## Notes
-The backup UI scripts are located in /opt/Pi-Backup-Installer.
+Choose the menu option by entering the corresponding number or press q to exit back to the terminal.
 
-Make sure /opt/Pi-Backup-Installer is readable and executable by all users.
+Kiauh installation is per-user and optional.
 
-Kiauh installation is user-specific because it configures Klipper firmware installs per user environment.
+## Additional Notes
+Kiauh repository: https://github.com/dw-0/kiauh
+
+Backup Installer repo: https://github.com/hendr13x/Pi-Backup-Installer
+
+The UI menu only triggers on SSH login sessions.
+
+To skip the backup UI on login, set environment variable SKIP_BACKUP_UI=1.
+
+## License
+MIT License
