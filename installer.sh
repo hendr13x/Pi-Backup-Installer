@@ -1,38 +1,46 @@
 #!/bin/bash
 
-# Use $HOME for current user
-INSTALL_DIR="$HOME/Pi-Backup-Installer"
+INSTALL_DIR="/opt/Pi-Backup-Installer"
+PROFILE_SCRIPT="/etc/profile.d/backup-ui.sh"
+KIAUH_PROMPT_SCRIPT="/etc/profile.d/kiauh-first-login.sh"
 
-# Detect Architecture (unchanged)
+# Detect architecture
 ARCH=$(uname -m)
 case "$ARCH" in
   x86_64) ARCH="amd64" ;;
   aarch64) ARCH="arm64" ;;
   armv7l) ARCH="armhf" ;;
-  *) echo "Unknown architecture: $ARCH"; exit 1 ;;
+  *)
+    echo "Unknown architecture: $ARCH"
+    exit 1
+    ;;
 esac
 echo "Detected architecture: $ARCH"
 
-# Install dependencies (sudo needed)
+# Install dependencies
 sudo apt-get update
-sudo apt-get install git cifs-utils -y
+sudo apt-get install -y git cifs-utils
 
-# Clone or pull the repo in user home (idempotent)
+# Clone or update Pi-Backup-Installer repo
 if [ -d "$INSTALL_DIR" ]; then
   echo "Updating existing installation at $INSTALL_DIR"
-  git -C "$INSTALL_DIR" pull
+  sudo git -C "$INSTALL_DIR" reset --hard origin/main
+  sudo git -C "$INSTALL_DIR" pull
 else
-  echo "Cloning Pi-Backup-Installer into $INSTALL_DIR"
-  git clone https://github.com/hendr13x/Pi-Backup-Installer.git "$INSTALL_DIR"
+  echo "Cloning Pi-Backup-Installer to $INSTALL_DIR"
+  sudo git clone https://github.com/hendr13x/Pi-Backup-Installer.git "$INSTALL_DIR"
 fi
 
-# Create config and credentials directories if missing
-mkdir -p "$INSTALL_DIR/config"
-mkdir -p "$INSTALL_DIR/credentials"
+# Set ownership and permissions
+sudo chown -R root:root "$INSTALL_DIR"
+sudo chmod -R 755 "$INSTALL_DIR"
 
-# If settings.conf missing, create default
-if [[ ! -f "$INSTALL_DIR/config/settings.conf" ]]; then
-  cat << EOF > "$INSTALL_DIR/config/settings.conf"
+# Create necessary directories if missing
+sudo mkdir -p "$INSTALL_DIR/backups" "$INSTALL_DIR/config" "$INSTALL_DIR/credentials"
+
+# Create default config if missing
+if [ ! -f "$INSTALL_DIR/config/settings.conf" ]; then
+  sudo tee "$INSTALL_DIR/config/settings.conf" > /dev/null << EOF
 NAS_IP=192.168.1.100
 NAS_SHARE=Backups
 NAS_USER=admin
@@ -42,43 +50,47 @@ AUTO_BACKUP_SCHEDULE=daily
 EOF
 fi
 
-# If nas_creds missing, create default (empty password)
-if [[ ! -f "$INSTALL_DIR/credentials/nas_creds" ]]; then
-  cat << EOF > "$INSTALL_DIR/credentials/nas_creds"
+# Create default credentials if missing
+if [ ! -f "$INSTALL_DIR/credentials/nas_creds" ]; then
+  sudo tee "$INSTALL_DIR/credentials/nas_creds" > /dev/null << EOF
 username=admin
 password=YourPasswordHere
 EOF
 fi
 
-chmod 600 "$INSTALL_DIR/credentials/nas_creds"
+sudo chmod 600 "$INSTALL_DIR/credentials/nas_creds"
 
-# Ask for Kiauh install
-read -rp "Install Kiauh? (y/n): " install_kiauh
-if [[ "$install_kiauh" =~ ^[Yy]$ ]]; then
-  git clone https://github.com/dw-0/kiauh.git "$HOME/kiauh"
-fi
+# Add sudoers rule for backup script
+sudo bash -c "echo '%sudo ALL=(ALL) NOPASSWD: $INSTALL_DIR/backup_sdcard.sh' > /etc/sudoers.d/sdcard-backup"
+sudo chmod 440 /etc/sudoers.d/sdcard-backup
 
-# Make scripts executable
-chmod +x "$INSTALL_DIR"/*.sh
-
-# Add passwordless sudo rule for backup script (for current user)
-echo "$(whoami) ALL=(ALL) NOPASSWD: $INSTALL_DIR/backup_sdcard.sh" | sudo tee /etc/sudoers.d/sdcard-backup > /dev/null
-sudo chmod 0440 /etc/sudoers.d/sdcard-backup
-
-# Setup global login script to run UI dynamically for any user
-sudo tee /etc/profile.d/backup-ui.sh > /dev/null << 'EOF'
+# Install profile script to launch backup UI for all users
+sudo tee "$PROFILE_SCRIPT" > /dev/null << EOF
 #!/bin/bash
-if [[ -n "$SSH_TTY" && -z "$SKIP_BACKUP_UI" ]]; then
-  INSTALL_DIR="$HOME/Pi-Backup-Installer"
-  if [ -x "$INSTALL_DIR/main.sh" ]; then
-    "$INSTALL_DIR/main.sh"
-  else
-    echo "⚠️ Backup UI script not found at $INSTALL_DIR/main.sh"
-    echo "Dropping to terminal..."
+if [[ -n "\$SSH_TTY" && -t 0 && -x "$INSTALL_DIR/main.sh" ]]; then
+  "$INSTALL_DIR/main.sh"
+fi
+EOF
+sudo chmod +x "$PROFILE_SCRIPT"
+
+# Create Kiauh first-login prompt for each user
+sudo tee "$KIAUH_PROMPT_SCRIPT" > /dev/null << 'EOF'
+#!/bin/bash
+if [[ -n "$SSH_TTY" && -t 0 ]]; then
+  if [[ ! -d "$HOME/kiauh" && ! -f "$HOME/.kiauh_prompted" ]]; then
+    echo
+    read -rp "Kiauh (Klipper Installation And Update Helper) is not installed. Install now? (y/n): " install_kiauh
+    if [[ "$install_kiauh" =~ ^[Yy]$ ]]; then
+      git clone https://github.com/dw-0/kiauh.git "$HOME/kiauh" && echo "Kiauh installed successfully."
+    else
+      echo "Skipping Kiauh installation."
+    fi
+    touch "$HOME/.kiauh_prompted"
   fi
 fi
 EOF
+sudo chmod +x "$KIAUH_PROMPT_SCRIPT"
 
-sudo chmod +x /etc/profile.d/backup-ui.sh
-
-echo "✅ Installation complete for user $(whoami). Reconnect via SSH to see the menu."
+echo "✅ Installation complete."
+echo "Reboot or reconnect via SSH as any user to see the backup menu."
+echo "Each user will be prompted once to install Kiauh on their first login."
