@@ -1,6 +1,7 @@
 #!/bin/bash
 
-INSTALL_DIR="$HOME/backup-installer"
+# Get the path of this script (absolute)
+INSTALL_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 # Detect Architecture
 ARCH=$(uname -m)

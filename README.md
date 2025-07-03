@@ -30,6 +30,7 @@ Run the installer script on your SBC (e.g., CB1, Raspberry Pi) with:
 ```bash
 git clone https://github.com/hendr13x/Pi-Backup-Installer
 cd Pi-Backup-Installer
+chmod +x installer.sh
 ./installer.sh
 
 
