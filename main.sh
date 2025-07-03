@@ -5,12 +5,7 @@ BACKUP_DIR="$INSTALL_DIR/backups"
 CONFIG_FILE="$INSTALL_DIR/config/settings.conf"
 
 # Load config
-if [[ -f "$CONFIG_FILE" ]]; then
-  source "$CONFIG_FILE"
-else
-  echo "⚠️ Config file not found at $CONFIG_FILE"
-  exit 1
-fi
+source "$CONFIG_FILE"
 
 # Function: get last backup file date
 get_last_backup_date() {
@@ -28,7 +23,7 @@ get_backup_size() {
   du -sh "$BACKUP_DIR" 2>/dev/null | cut -f1
 }
 
-# Function: check next scheduled auto-backup time
+# Function: check next scheduled auto-backup time (if enabled)
 get_next_backup_time() {
   if [[ "$AUTO_BACKUP_ENABLED" == "yes" ]]; then
     systemctl list-timers --all | grep sdcard-backup.timer | awk '{print $1, $2, $3}' || echo "Unknown"
@@ -37,7 +32,6 @@ get_next_backup_time() {
   fi
 }
 
-# Detect if Kiauh exists for this user
 KIAUH_PATH="$HOME/kiauh"
 kiauh_installed=false
 [ -x "$KIAUH_PATH/kiauh.sh" ] && kiauh_installed=true
@@ -59,33 +53,53 @@ while true; do
   echo "────────────────────────────────────"
   echo
   echo "1) SD Card Backup Utility"
+
   if $kiauh_installed; then
     echo "2) Run Kiauh (Klipper Installation And Update Helper)"
+  else
+    echo "2) Install Kiauh (Klipper Installation And Update Helper)"
   fi
+
   echo "3) Option 3 (Coming Soon)"
   echo "q) Exit to Terminal"
   echo
+
   read -rp "Enter choice: " choice
 
   case "$choice" in
-    1) bash "$INSTALL_DIR/backup_menu.sh" ;;
+    1)
+      bash "$INSTALL_DIR/backup_menu.sh"
+      ;;
     2)
       if $kiauh_installed; then
         bash "$KIAUH_PATH/kiauh.sh"
       else
-        echo "Kiauh is not installed for user $USER."
-        sleep 1
+        echo "Installing Kiauh..."
+        git clone https://github.com/th33xitus/kiauh.git "$KIAUH_PATH"
+        if [ $? -eq 0 ]; then
+          echo "Kiauh installed successfully! Run it with: bash ~/kiauh/kiauh.sh"
+          kiauh_installed=true
+        else
+          echo "Error installing Kiauh."
+        fi
+        sleep 2
       fi
       ;;
-    3) echo "Coming soon..."; sleep 1 ;;
+    3)
+      echo "Coming soon..."
+      sleep 1
+      ;;
     q|Q)
       echo "Returning to terminal..."
-      # Re-run MOTD if available
+      # Run MOTD if available
       if [ -d /etc/update-motd.d ]; then
         run-parts /etc/update-motd.d
       fi
       exec bash
       ;;
-    *) echo "Invalid option"; sleep 1 ;;
+    *)
+      echo "Invalid option"
+      sleep 1
+      ;;
   esac
 done
