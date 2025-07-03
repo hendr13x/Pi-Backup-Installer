@@ -1,39 +1,52 @@
 #!/bin/bash
 
-set -e
-
 INSTALL_DIR="/opt/Pi-Backup-Installer"
 CONFIG_FILE="$INSTALL_DIR/config/settings.conf"
 CREDENTIALS_FILE="$INSTALL_DIR/credentials/nas_creds"
-MOUNT_POINT="/mnt/backup"
-DATE=$(date +"%Y-%m-%d_%H-%M-%S")
-BACKUP_FILENAME="backup_$DATE.img.gz"
-NAS_TARGET_PATH="$MOUNT_POINT/$BACKUP_FILENAME"
 
-# Load settings
+# Load config
 source "$CONFIG_FILE"
 
-# Read credentials securely
-if [[ ! -r "$CREDENTIALS_FILE" ]]; then
-  echo "❌ Missing or unreadable NAS credentials at $CREDENTIALS_FILE"
-  exit 1
+MOUNT_POINT="/opt/backup_mount"
+BACKUP_DIR="$MOUNT_POINT/$NAS_SHARE"
+
+# Create mount point if missing (needs to be run as root or via sudo)
+if [ ! -d "$MOUNT_POINT" ]; then
+  sudo mkdir -p "$MOUNT_POINT"
+  sudo chown root:backup "$MOUNT_POINT"
+  sudo chmod 775 "$MOUNT_POINT"
 fi
 
-source "$CREDENTIALS_FILE"
+# Mount NAS if not mounted
+if ! mountpoint -q "$MOUNT_POINT"; then
+  echo "🔗 Mounting NAS share..."
+  sudo mount -t cifs "//$NAS_IP/$NAS_SHARE" "$MOUNT_POINT" -o credentials="$CREDENTIALS_FILE",rw,vers=3.0,uid=$(id -u),gid=$(id -g),file_mode=0664,dir_mode=0775
+  if [ $? -ne 0 ]; then
+    echo "❌ Failed to mount NAS share"
+    read -rp "Press Enter to continue..."
+    exit 1
+  fi
+fi
 
-# Mount NAS share
-echo "🔗 Mounting NAS share at $MOUNT_POINT..."
-sudo mkdir -p "$MOUNT_POINT"
-sudo mount -t cifs "//$NAS_IP/$NAS_SHARE" "$MOUNT_POINT" \
-  -o username="$username",password="$password",rw,vers=3.0,uid=$(id -u),gid=$(id -g)
+# Prepare backup file name
+TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
+BACKUP_FILE="$BACKUP_DIR/sdcard_backup_$TIMESTAMP.img.gz"
 
-# Backup directly to NAS
-echo "💾 Creating SD card backup directly to NAS..."
-sudo dd if=/dev/mmcblk0 bs=4M status=progress conv=fsync | gzip > "$NAS_TARGET_PATH"
+# Create backup directory if missing
+mkdir -p "$BACKUP_DIR"
 
-# Unmount
-echo "🔌 Unmounting NAS share..."
-sudo umount "$MOUNT_POINT"
+echo "💾 Starting SD card backup to $BACKUP_FILE ..."
 
-echo "✅ Backup complete: $NAS_TARGET_PATH"
+# Run the backup with sudo to read raw device (assuming /dev/mmcblk0)
+sudo dd if=/dev/mmcblk0 bs=4M status=progress | gzip > "$BACKUP_FILE"
+
+if [ $? -eq 0 ]; then
+  echo "✅ Backup completed successfully!"
+else
+  echo "❌ Backup failed!"
+fi
+
 read -rp "Press Enter to continue..."
+
+# Optional: unmount NAS (comment out if you want to keep it mounted)
+# sudo umount "$MOUNT_POINT"

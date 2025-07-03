@@ -1,17 +1,38 @@
 #!/bin/bash
 
-# Pi-Backup-Installer - Full Setup Script
 set -e
 
 REPO_URL="https://github.com/hendr13x/Pi-Backup-Installer.git"
 INSTALL_DIR="/opt/Pi-Backup-Installer"
 PROFILE_SCRIPT="/etc/profile.d/backup-ui.sh"
-BACKUP_SCRIPT="$INSTALL_DIR/backup.sh"
-SUDOERS_FILE="/etc/sudoers.d/sdcard-backup"
+SUDOERS_FILE="/etc/sudoers.d/backup-nopasswd"
+BACKUP_GROUP="backup"
 
 echo "🔄 Installing Pi-Backup-Installer..."
 
-# Clone or update the repository
+# 1) Create backup group if it doesn't exist
+if ! getent group "$BACKUP_GROUP" >/dev/null; then
+  echo "👥 Creating group '$BACKUP_GROUP'..."
+  groupadd "$BACKUP_GROUP"
+else
+  echo "👥 Group '$BACKUP_GROUP' already exists."
+fi
+
+# 2) Add all regular users to the backup group (optional: customize user list here)
+echo "👤 Adding users to '$BACKUP_GROUP' group..."
+for user in $(awk -F: '$3 >= 1000 && $3 != 65534 {print $1}' /etc/passwd); do
+  usermod -aG "$BACKUP_GROUP" "$user" && echo "  Added $user"
+done
+
+# 3) Create sudoers file for passwordless mount, umount, dd for backup group
+echo "🔐 Configuring sudoers for '$BACKUP_GROUP' group..."
+cat << EOF > "$SUDOERS_FILE"
+# Allow users in '$BACKUP_GROUP' group to run mount, umount, and dd without password
+%$BACKUP_GROUP ALL=(ALL) NOPASSWD: /bin/mount, /bin/umount, /bin/dd
+EOF
+chmod 440 "$SUDOERS_FILE"
+
+# 4) Clone or update the repository
 if [ -d "$INSTALL_DIR/.git" ]; then
   echo "📁 Repo exists. Pulling latest changes..."
   git -C "$INSTALL_DIR" fetch origin
@@ -21,10 +42,25 @@ else
   git clone "$REPO_URL" "$INSTALL_DIR"
 fi
 
-# Create config and credentials directories if missing
+# 5) Make sure required scripts exist
+REQUIRED_SCRIPTS=(main.sh backup_menu.sh configure_backup.sh backup.sh)
+for script in "${REQUIRED_SCRIPTS[@]}"; do
+  if [ ! -f "$INSTALL_DIR/$script" ]; then
+    echo "❌ Missing script: $script"
+    exit 1
+  fi
+done
+
+# 6) Set proper permissions
+echo "🔐 Setting permissions..."
+chown -R root:root "$INSTALL_DIR"
+chmod -R 755 "$INSTALL_DIR"
+chmod 600 "$INSTALL_DIR/credentials/nas_creds" 2>/dev/null || true
+
+# 7) Create config and credentials directories if missing
 mkdir -p "$INSTALL_DIR/config" "$INSTALL_DIR/credentials"
 
-# Create default config
+# 8) Create default config if missing
 CONFIG_FILE="$INSTALL_DIR/config/settings.conf"
 if [[ ! -f "$CONFIG_FILE" ]]; then
   cat << EOF > "$CONFIG_FILE"
@@ -37,7 +73,7 @@ AUTO_BACKUP_SCHEDULE=daily
 EOF
 fi
 
-# Create default credentials
+# 9) Create default NAS credentials file
 CREDENTIALS_FILE="$INSTALL_DIR/credentials/nas_creds"
 if [[ ! -f "$CREDENTIALS_FILE" ]]; then
   cat << EOF > "$CREDENTIALS_FILE"
@@ -47,13 +83,7 @@ EOF
   chmod 600 "$CREDENTIALS_FILE"
 fi
 
-# Set ownership and permissions
-echo "🔐 Setting permissions..."
-chown -R root:root "$INSTALL_DIR"
-chmod -R 755 "$INSTALL_DIR"
-chmod 600 "$CREDENTIALS_FILE"
-
-# Install login hook
+# 10) Set up login UI for all users
 echo "🧩 Configuring login UI..."
 cat << 'EOF' > "$PROFILE_SCRIPT"
 #!/bin/bash
@@ -65,14 +95,9 @@ if [[ -n "$SSH_TTY" && -z "$SKIP_BACKUP_UI" ]]; then
   fi
 fi
 EOF
+
 chmod +x "$PROFILE_SCRIPT"
 
-# Set up sudoers rule to allow backup.sh without password
-echo "🔧 Setting up passwordless sudo for backup..."
-cat << EOF > "$SUDOERS_FILE"
-ALL ALL=(ALL) NOPASSWD: $BACKUP_SCRIPT
-EOF
-chmod 0440 "$SUDOERS_FILE"
-
 echo "✅ Installation complete!"
-echo "👉 Reconnect via SSH or run: sudo $INSTALL_DIR/main.sh"
+echo "👉 Reconnect via SSH or run: /opt/Pi-Backup-Installer/main.sh"
+echo "ℹ️ Users added to '$BACKUP_GROUP' group can run backup commands without sudo password."
