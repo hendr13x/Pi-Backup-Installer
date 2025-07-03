@@ -71,9 +71,16 @@ while true; do
       fi
       ;;
     3) echo "Coming soon..."; sleep 1 ;;
-    q|Q)
+        q|Q)
       echo "Returning to terminal..."
-      break
+
+      # Re-run MOTD if present
+      if [ -d /etc/update-motd.d ]; then
+        run-parts /etc/update-motd.d
+      fi
+
+      # Start a fresh shell session
+      exec bash
       ;;
     *) echo "Invalid option"; sleep 1 ;;
   esac

@@ -1,9 +1,9 @@
 #!/bin/bash
 
-# Get the path of this script (absolute)
-INSTALL_DIR="$(cd "$(dirname "$0")" && pwd)"
+# Use $HOME for current user
+INSTALL_DIR="$HOME/Pi-Backup-Installer"
 
-# Detect Architecture
+# Detect Architecture (unchanged)
 ARCH=$(uname -m)
 case "$ARCH" in
   x86_64) ARCH="amd64" ;;
@@ -13,14 +13,22 @@ case "$ARCH" in
 esac
 echo "Detected architecture: $ARCH"
 
-# Install dependencies
+# Install dependencies (sudo needed)
 sudo apt-get update
 sudo apt-get install git cifs-utils -y
+
+# Clone or pull the repo in user home (idempotent)
+if [ -d "$INSTALL_DIR" ]; then
+  echo "Updating existing installation at $INSTALL_DIR"
+  git -C "$INSTALL_DIR" pull
+else
+  echo "Cloning Pi-Backup-Installer into $INSTALL_DIR"
+  git clone https://github.com/hendr13x/Pi-Backup-Installer.git "$INSTALL_DIR"
+fi
 
 # Create config and credentials directories if missing
 mkdir -p "$INSTALL_DIR/config"
 mkdir -p "$INSTALL_DIR/credentials"
-mkdir -p "$INSTALL_DIR/backups"
 
 # If settings.conf missing, create default
 if [[ ! -f "$INSTALL_DIR/config/settings.conf" ]]; then
@@ -42,7 +50,6 @@ password=YourPasswordHere
 EOF
 fi
 
-# Set secure permissions on credentials file
 chmod 600 "$INSTALL_DIR/credentials/nas_creds"
 
 # Ask for Kiauh install
@@ -51,12 +58,27 @@ if [[ "$install_kiauh" =~ ^[Yy]$ ]]; then
   git clone https://github.com/dw-0/kiauh.git "$HOME/kiauh"
 fi
 
-# Set script permissions
+# Make scripts executable
 chmod +x "$INSTALL_DIR"/*.sh
 
-# Add passwordless sudo for backup script
+# Add passwordless sudo rule for backup script (for current user)
 echo "$(whoami) ALL=(ALL) NOPASSWD: $INSTALL_DIR/backup_sdcard.sh" | sudo tee /etc/sudoers.d/sdcard-backup > /dev/null
 sudo chmod 0440 /etc/sudoers.d/sdcard-backup
 
-# ✅ Setup SSH login UI for all users with dynamic path
-sudo tee /etc/profile.d/backup-ui.sh > /dev/null <
+# Setup global login script to run UI dynamically for any user
+sudo tee /etc/profile.d/backup-ui.sh > /dev/null << 'EOF'
+#!/bin/bash
+if [[ -n "$SSH_TTY" && -z "$SKIP_BACKUP_UI" ]]; then
+  INSTALL_DIR="$HOME/Pi-Backup-Installer"
+  if [ -x "$INSTALL_DIR/main.sh" ]; then
+    "$INSTALL_DIR/main.sh"
+  else
+    echo "⚠️ Backup UI script not found at $INSTALL_DIR/main.sh"
+    echo "Dropping to terminal..."
+  fi
+fi
+EOF
+
+sudo chmod +x /etc/profile.d/backup-ui.sh
+
+echo "✅ Installation complete for user $(whoami). Reconnect via SSH to see the menu."
