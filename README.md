@@ -28,7 +28,7 @@ This project provides an easy-to-use terminal-based application for Single Board
 Run the installer script on your SBC (e.g., CB1, Raspberry Pi) with:
 
 ```bash
-git clone https://github.com/yourusername/your-repo.git
+git clone https://github.com/hendr13x/Pi-Backup-Installer
 cd your-repo
 ./installer.sh
 
