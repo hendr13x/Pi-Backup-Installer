@@ -20,8 +20,9 @@ sudo apt-get install git cifs-utils -y
 # Create config and credentials directories if missing
 mkdir -p "$INSTALL_DIR/config"
 mkdir -p "$INSTALL_DIR/credentials"
+mkdir -p "$INSTALL_DIR/backups"
 
-# Create default settings.conf if missing
+# If settings.conf missing, create default
 if [[ ! -f "$INSTALL_DIR/config/settings.conf" ]]; then
   cat << EOF > "$INSTALL_DIR/config/settings.conf"
 NAS_IP=192.168.1.100
@@ -33,7 +34,7 @@ AUTO_BACKUP_SCHEDULE=daily
 EOF
 fi
 
-# Create default nas_creds if missing
+# If nas_creds missing, create default (empty password)
 if [[ ! -f "$INSTALL_DIR/credentials/nas_creds" ]]; then
   cat << EOF > "$INSTALL_DIR/credentials/nas_creds"
 username=admin
@@ -41,7 +42,7 @@ password=YourPasswordHere
 EOF
 fi
 
-# Set secure permissions on credentials
+# Set secure permissions on credentials file
 chmod 600 "$INSTALL_DIR/credentials/nas_creds"
 
 # Ask for Kiauh install
@@ -50,27 +51,12 @@ if [[ "$install_kiauh" =~ ^[Yy]$ ]]; then
   git clone https://github.com/dw-0/kiauh.git "$HOME/kiauh"
 fi
 
-# Set executable permissions for all shell scripts
+# Set script permissions
 chmod +x "$INSTALL_DIR"/*.sh
 
-# Setup passwordless sudo for backup script
+# Add passwordless sudo for backup script
 echo "$(whoami) ALL=(ALL) NOPASSWD: $INSTALL_DIR/backup_sdcard.sh" | sudo tee /etc/sudoers.d/sdcard-backup > /dev/null
 sudo chmod 0440 /etc/sudoers.d/sdcard-backup
 
-# Setup global SSH login UI (shown to all users)
-sudo tee /etc/profile.d/backup-ui.sh > /dev/null << EOF
-#!/bin/bash
-if [[ -n "\$SSH_TTY" && -z "\$SKIP_BACKUP_UI" ]]; then
-  if [ -x "$INSTALL_DIR/main.sh" ]; then
-    "$INSTALL_DIR/main.sh"
-  else
-    echo "⚠️ Backup UI script not found at $INSTALL_DIR/main.sh"
-    echo "Dropping to terminal..."
-  fi
-fi
-EOF
-
-sudo chmod +x /etc/profile.d/backup-ui.sh
-
-echo "✅ Installation complete. Reconnect via SSH to see the menu."
-
+# ✅ Setup SSH login UI for all users with dynamic path
+sudo tee /etc/profile.d/backup-ui.sh > /dev/null <
