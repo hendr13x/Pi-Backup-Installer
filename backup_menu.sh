@@ -41,7 +41,14 @@ show_backup_config_menu() {
       2) read -rp "New Share: " v; v_escaped="${v//\\/\\\\}"; sed -i "s|^NAS_SHARE=.*|NAS_SHARE=$v_escaped|" "$CONFIG_FILE" ;;
       3) read -rp "New Username: " v; sed -i "s/^username=.*/username=$v/" "$CREDS_FILE" || echo "username=$v" >> "$CREDS_FILE" ;;
       4) read -rp "New Password: " v; sed -i "s/^password=.*/password=$v/" "$CREDS_FILE" || echo "password=$v" >> "$CREDS_FILE" ;;
-      5) read -rp "Max backups to keep: " v; sed -i "s/^MAX_BACKUPS=.*/MAX_BACKUPS=$v/" "$CONFIG_FILE" ;;
+      5)
+        read -rp "Max backups to keep (1-50): " v
+        if [[ "$v" =~ ^[0-9]+$ ]] && (( v >= 1 && v <= 50 )); then
+          sed -i "s/^MAX_BACKUPS=.*/MAX_BACKUPS=$v/" "$CONFIG_FILE"
+        else
+          echo "[WARNING] Please enter a number between 1 and 50."; sleep 2
+        fi
+        ;;
       6)
         read -rp "Enable auto backup (yes/no): " en
         read -rp "Schedule (daily/weekly): " sch
