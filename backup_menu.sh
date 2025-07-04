@@ -20,7 +20,7 @@ fi
 
 show_backup_config_menu() {
   while true; do
-    unset NAS_SHARE; source "$CONFIG_FILE"
+    unset NAS_SHARE; source "$CONFIG_FILE"; NAS_USER="$(grep '^username=' "$CREDS_FILE" | cut -d'=' -f2)"
     source "$CREDS_FILE" 2>/dev/null || true
     backup_count=$(ls "$INSTALL_DIR/backups"/*.img.gz 2>/dev/null | wc -l)
     clear
@@ -37,7 +37,7 @@ show_backup_config_menu() {
     case $opt in
       1) read -rp "New NAS IP: " v; sed -i "s/^NAS_IP=.*/NAS_IP=$v/" "$CONFIG_FILE" ;;
       2) read -rp "New Share: " v; v_escaped="${v//\\/\\\\}"; sed -i "s|^NAS_SHARE=.*|NAS_SHARE=$v_escaped|" "$CONFIG_FILE" ;;
-      3) read -rp "New Username: " v; sed -i "s/^username=.*/username=$v/" "$CREDS_FILE" ;;
+      3) read -rp "New Username: " v; sed -i "s/^username=.*/username=$v/" "$CREDS_FILE" || echo "username=$v" >> "$CREDS_FILE" ;;
       4) read -rp "New Password: " v; sed -i "s/^password=.*/password=$v/" "$CREDS_FILE" || echo "password=$v" >> "$CREDS_FILE" ;;
       5) read -rp "Max backups to keep: " v; sed -i "s/^MAX_BACKUPS=.*/MAX_BACKUPS=$v/" "$CONFIG_FILE" ;;
       6)
