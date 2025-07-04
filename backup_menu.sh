@@ -20,7 +20,7 @@ fi
 
 show_backup_config_menu() {
   while true; do
-    source "$CONFIG_FILE"
+    unset NAS_SHARE; source "$CONFIG_FILE"
     source "$CREDS_FILE" 2>/dev/null || true
     backup_count=$(ls "$INSTALL_DIR/backups"/*.img.gz 2>/dev/null | wc -l)
     clear
