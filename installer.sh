@@ -95,12 +95,61 @@ if [[ "$install_kiauh" =~ ^[Yy]$ ]]; then
   fi
 fi
 
+# Write the config writer script
+sudo tee "$INSTALL_DIR/write_config.sh" > /dev/null << 'EOF'
+#!/bin/bash
+
+CONFIG_FILE="/opt/Pi-Backup-Installer/config/settings.conf"
+CREDS_FILE="/opt/Pi-Backup-Installer/credentials/nas_creds"
+
+if [[ $EUID -ne 0 ]]; then
+  echo "[ERROR] This script must be run as root via sudo."
+  exit 1
+fi
+
+case "$1" in
+  set_config)
+    KEY="$2"
+    VALUE="$3"
+    if [[ -z "$KEY" || -z "$VALUE" ]]; then
+      echo "Usage: \$0 set_config <KEY> <VALUE>"
+      exit 1
+    fi
+    if grep -q "^\$KEY=" "\$CONFIG_FILE"; then
+      sed -i "s|^\$KEY=.*|\$KEY=\$VALUE|" "\$CONFIG_FILE"
+    else
+      echo "\$KEY=\$VALUE" >> "\$CONFIG_FILE"
+    fi
+    ;;
+
+  set_cred)
+    KEY="$2"
+    VALUE="$3"
+    if [[ -z "$KEY" || -z "$VALUE" ]]; then
+      echo "Usage: \$0 set_cred <KEY> <VALUE>"
+      exit 1
+    fi
+    if grep -q "^\$KEY=" "\$CREDS_FILE"; then
+      sed -i "s|^\$KEY=.*|\$KEY=\$VALUE|" "\$CREDS_FILE"
+    else
+      echo "\$KEY=\$VALUE" >> "\$CREDS_FILE"
+    fi
+    ;;
+
+  *)
+    echo "Usage: \$0 {set_config|set_cred} <KEY> <VALUE>"
+    exit 1
+    ;;
+esac
+EOF
+
 # Set executable permissions
 sudo chmod +x "$INSTALL_DIR"/*.sh
+sudo chmod +x "$INSTALL_DIR/write_config.sh"
 
 # Add passwordless sudo rule
 if sudo -n true 2>/dev/null; then
-  echo "$USER ALL=(ALL) NOPASSWD: $INSTALL_DIR/backup_sdcard.sh" | sudo tee /etc/sudoers.d/sdcard-backup > /dev/null
+  echo "$USER ALL=(ALL) NOPASSWD: $INSTALL_DIR/backup_sdcard.sh, $INSTALL_DIR/write_config.sh" | sudo tee /etc/sudoers.d/sdcard-backup > /dev/null
   sudo chmod 0440 /etc/sudoers.d/sdcard-backup
 else
   echo "⚠️  Sudo access is required to install passwordless rules. Skipping."
