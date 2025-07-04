@@ -15,15 +15,11 @@ if ! grep -q "## backup-ui-start" "$HOME/.bashrc"; then
 cat << 'EOF' >> "$HOME/.bashrc"
 
 ## backup-ui-start
-if [[ -n "$SSH_TTY" && -z "$BACKUP_UI_SHOWN" ]]; then
-  export BACKUP_UI_SHOWN=1
   if [[ -f /opt/Pi-Backup-Installer/main.sh ]]; then
     /opt/Pi-Backup-Installer/main.sh
   else
     echo "⚠️  Warning: Pi Backup UI not found at /opt/Pi-Backup-Installer/main.sh"
   fi
-  exit
-fi
 ## backup-ui-end
 EOF
 fi
