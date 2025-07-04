@@ -26,24 +26,24 @@ function configure_settings() {
     case $opt in
       1)
         read -rp "New NAS IP: " v
-        sudo "$INSTALL_DIR/write_config.sh" set_config NAS_IP "$v"
+        echo "$v" | sudo "$INSTALL_DIR/write_config.sh" set_config NAS_IP
         ;;
       2)
         read -rp "New Share: " v
-        sudo "$INSTALL_DIR/write_config.sh" set_config NAS_SHARE "$v"
+        echo "$v" | sudo "$INSTALL_DIR/write_config.sh" set_config NAS_SHARE
         ;;
       3)
         read -rp "New Username: " v
-        sudo "$INSTALL_DIR/write_config.sh" set_cred username "$v"
+        echo "$v" | sudo "$INSTALL_DIR/write_config.sh" set_cred username
         ;;
       4)
         read -rp "New Password: " v
-        sudo "$INSTALL_DIR/write_config.sh" set_cred password "$v"
+        echo "$v" | sudo "$INSTALL_DIR/write_config.sh" set_cred password
         ;;
       5)
         read -rp "Max backups to keep (1–50): " v
         if [[ "$v" =~ ^[0-9]+$ ]] && (( v >= 1 && v <= 50 )); then
-          sudo "$INSTALL_DIR/write_config.sh" set_config MAX_BACKUPS "$v"
+          echo "$v" | sudo "$INSTALL_DIR/write_config.sh" set_config MAX_BACKUPS
         else
           echo "Invalid input. Must be a number between 1 and 50."
           sleep 2
@@ -52,12 +52,12 @@ function configure_settings() {
       6)
         read -rp "Enable Auto Backup (yes/no): " en
         read -rp "Schedule (daily/weekly/monthly): " sch
-        sudo "$INSTALL_DIR/write_config.sh" set_config AUTO_BACKUP_ENABLED "$en"
-        sudo "$INSTALL_DIR/write_config.sh" set_config AUTO_BACKUP_SCHEDULE "$sch"
+        echo "$en" | sudo "$INSTALL_DIR/write_config.sh" set_config AUTO_BACKUP_ENABLED
+        echo "$sch" | sudo "$INSTALL_DIR/write_config.sh" set_config AUTO_BACKUP_SCHEDULE
         ;;
       7)
         read -rp "Backup filename prefix: " v
-        sudo "$INSTALL_DIR/write_config.sh" set_config BACKUP_BASENAME "$v"
+        echo "$v" | sudo "$INSTALL_DIR/write_config.sh" set_config BACKUP_BASENAME
         ;;
       q|Q)
         return
