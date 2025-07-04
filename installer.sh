@@ -59,7 +59,7 @@ sudo chmod 600 "$INSTALL_DIR/credentials/nas_creds"
 sudo apt-get update
 
 # Clone Pi-Backup-Installer if not already present
-if [[ ! -f "$INSTALL_DIR/main.sh" ]]; then
+if [[ ! -d "$INSTALL_DIR" || -z "$(ls -A $INSTALL_DIR 2>/dev/null)" ]]; then
   echo "Cloning Pi-Backup-Installer source files into $INSTALL_DIR..."
   sudo git clone https://github.com/hendr13x/Pi-Backup-Installer.git "$INSTALL_DIR"
 else
