@@ -66,8 +66,9 @@ cat << EOF >> "$HOME/.bashrc"
 ## backup-ui-start
 if [[ -n "$SSH_TTY" ]]; then
   /opt/Pi-Backup-Installer/main.sh
-  echo -e "
-Returning to terminal..."
+  echo -e "\n=========================="
+echo -e "Returning to terminal..."
+echo -e "=========================="
   sleep 1
   if [[ -f /etc/update-motd.d/30-armbian-sysinfo ]]; then
     /etc/update-motd.d/30-armbian-sysinfo
@@ -90,9 +91,6 @@ fi
 
 if [[ -f /etc/update-motd.d/10-uname ]]; then
   sudo chmod +x /etc/update-motd.d/10-uname
-fi
-if [[ -f /etc/update-motd.d/30-armbian-sysinfo ]]; then
-  /etc/update-motd.d/30-armbian-sysinfo
 fi
 
 echo "✅ Installation complete. Reconnect via SSH to see the menu."
