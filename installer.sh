@@ -64,8 +64,14 @@ if ! grep -q "## backup-ui-start" "$HOME/.bashrc"; then
 cat << EOF >> "$HOME/.bashrc"
 
 ## backup-ui-start
-if [[ -n "\$SSH_TTY" ]]; then
+if [[ -n "$SSH_TTY" ]]; then
   /opt/Pi-Backup-Installer/main.sh
+  echo -e "
+Returning to terminal..."
+  sleep 1
+  if [[ -f /etc/update-motd.d/30-armbian-sysinfo ]]; then
+    /etc/update-motd.d/30-armbian-sysinfo
+  fi
   # exit  # Commented to allow MOTD + terminal after quitting menu
 fi
 ## backup-ui-end
