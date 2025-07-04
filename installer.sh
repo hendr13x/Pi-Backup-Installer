@@ -4,55 +4,64 @@ INSTALL_DIR="/opt/Pi-Backup-Installer"
 CONFIG_FILE="$INSTALL_DIR/config/settings.conf"
 CREDS_FILE="$INSTALL_DIR/credentials/nas_creds"
 MOUNT_POINT="/mnt/backup_nas"
+BACKUP_GROUP="backup"
+
+# Ensure the shared group exists
+if ! getent group "$BACKUP_GROUP" > /dev/null; then
+  sudo groupadd "$BACKUP_GROUP"
+fi
 
 mkdir -p "$MOUNT_POINT"
 
-# Defer NAS mount to runtime inside main.sh; avoid doing it during install
-# This avoids errors on first install before configuration is complete
-
-# Add backup-ui autostart to .bashrc with session guard
-if ! grep -q "## backup-ui-start" "$HOME/.bashrc"; then
-cat << 'EOF' >> "$HOME/.bashrc"
-
-## backup-ui-start
-  if [[ -f /opt/Pi-Backup-Installer/main.sh ]]; then
-    /opt/Pi-Backup-Installer/main.sh
-  else
-    echo "⚠️  Warning: Pi Backup UI not found at /opt/Pi-Backup-Installer/main.sh"
-  fi
-## backup-ui-end
-EOF
+# Add system-wide backup UI autostart
+sudo tee /etc/profile.d/pi-backup.sh > /dev/null << 'EOF'
+#!/bin/bash
+if [[ -n "$SSH_TTY" && -f /opt/Pi-Backup-Installer/main.sh ]]; then
+  /opt/Pi-Backup-Installer/main.sh
+  exit
 fi
+EOF
+
+sudo chmod +x /etc/profile.d/pi-backup.sh
 
 # Ensure required directories exist
 sudo mkdir -p "$INSTALL_DIR/config"
 sudo mkdir -p "$INSTALL_DIR/credentials"
+sudo mkdir -p "$INSTALL_DIR/backups"
 
 # Create default settings.conf if missing
-if [[ ! -f "$INSTALL_DIR/config/settings.conf" ]]; then
-  sudo tee "$INSTALL_DIR/config/settings.conf" > /dev/null << EOF
+if [[ ! -f "$CONFIG_FILE" ]]; then
+  sudo tee "$CONFIG_FILE" > /dev/null << EOF
 NAS_IP=192.168.1.100
 NAS_SHARE=Backups
 NAS_USER=admin
 MAX_BACKUPS=5
 AUTO_BACKUP_ENABLED=no
 AUTO_BACKUP_SCHEDULE=daily
+BACKUP_BASENAME=sd_backup
 EOF
 fi
 
 # Create default nas_creds if missing
-if [[ ! -f "$INSTALL_DIR/credentials/nas_creds" ]]; then
-  sudo tee "$INSTALL_DIR/credentials/nas_creds" > /dev/null << EOF
+if [[ ! -f "$CREDS_FILE" ]]; then
+  sudo tee "$CREDS_FILE" > /dev/null << EOF
 username=admin
 password=YourPasswordHere
 EOF
 fi
 
-# Set secure permissions on credentials
-sudo chmod 600 "$INSTALL_DIR/credentials/nas_creds"
+# Set group and permissions
+sudo chown -R root:"$BACKUP_GROUP" "$INSTALL_DIR"
+sudo chmod -R 775 "$INSTALL_DIR"
+sudo chmod 664 "$CONFIG_FILE"
+sudo chmod 660 "$CREDS_FILE"
+
+# Add current user to group
+sudo usermod -aG "$BACKUP_GROUP" "$USER"
 
 # Install dependencies
 sudo apt-get update
+sudo apt-get install git cifs-utils -y
 
 # Update or clone Pi-Backup-Installer repo
 if [[ -d "$INSTALL_DIR/.git" ]]; then
@@ -64,7 +73,6 @@ else
   sudo rm -rf "$INSTALL_DIR"
   sudo git clone https://github.com/hendr13x/Pi-Backup-Installer.git "$INSTALL_DIR"
 fi
-sudo apt-get install git cifs-utils -y
 
 # Ask for Kiauh install
 read -rp "Install Kiauh? (y/n): " install_kiauh
@@ -80,12 +88,12 @@ if [[ "$install_kiauh" =~ ^[Yy]$ ]]; then
   fi
 fi
 
-# Set permissions
+# Set executable permissions
 sudo chmod +x "$INSTALL_DIR"/*.sh
 
 # Add passwordless sudo rule
 if sudo -n true 2>/dev/null; then
-  echo "$(whoami) ALL=(ALL) NOPASSWD: $INSTALL_DIR/backup_sdcard.sh" | sudo tee /etc/sudoers.d/sdcard-backup > /dev/null
+  echo "$USER ALL=(ALL) NOPASSWD: $INSTALL_DIR/backup_sdcard.sh" | sudo tee /etc/sudoers.d/sdcard-backup > /dev/null
   sudo chmod 0440 /etc/sudoers.d/sdcard-backup
 else
   echo "⚠️  Sudo access is required to install passwordless rules. Skipping."

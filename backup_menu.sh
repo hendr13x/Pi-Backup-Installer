@@ -21,10 +21,10 @@ fi
 
 show_backup_config_menu() {
   while true; do
+    clear
     unset NAS_SHARE; source "$CONFIG_FILE"; NAS_USER="$(grep '^username=' "$CREDS_FILE" | cut -d'=' -f2)"
     source "$CREDS_FILE" 2>/dev/null || true
     backup_count=$(ls "$INSTALL_DIR/backups"/*.img.gz 2>/dev/null | wc -l)
-    clear
     echo "Configure Backup Settings:"
     echo "1) NAS IP/Hostname         (Current: $NAS_IP)"
     echo "2) NAS Share               (Current: ${NAS_SHARE//\\/\\\\})"
@@ -70,6 +70,7 @@ show_backup_config_menu() {
 }
 
 while true; do
+  clear
   echo
   echo "SD Card Backup Utility"
   echo "------------------------"
