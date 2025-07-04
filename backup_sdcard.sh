@@ -29,9 +29,13 @@ IMG_NAME="sd_backup_$TIMESTAMP.img.gz"
 LOG_FILE="$INSTALL_DIR/backups/backup_$TIMESTAMP.log"
 
 echo "[INFO] Mounting NAS..." | tee "$LOG_FILE"
-if ! mount -t cifs "//${NAS_IP}/${NAS_SHARE}" "$MOUNT_DIR" -o credentials="$CREDS_FILE",vers=3.0; then
-  echo "[ERROR] Mount failed." | tee -a "$LOG_FILE"
-  exit 1
+if mountpoint -q "$MOUNT_DIR"; then
+  echo "[INFO] NAS already mounted at $MOUNT_DIR" | tee -a "$LOG_FILE"
+else
+  if ! mount -t cifs "//${NAS_IP}/${NAS_SHARE}" "$MOUNT_DIR" -o credentials="$CREDS_FILE",vers=3.0; then
+    echo "[ERROR] Mount failed." | tee -a "$LOG_FILE"
+    exit 1
+  fi
 fi
 
 echo "[INFO] Backing up /dev/mmcblk0..." | tee -a "$LOG_FILE"
