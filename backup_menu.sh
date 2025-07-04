@@ -7,6 +7,8 @@ source "$CONFIG_FILE" 2>/dev/null
 source "$CREDS_FILE" 2>/dev/null
 
 function configure_settings() {
+  source "$CONFIG_FILE" 2>/dev/null
+  source "$CREDS_FILE" 2>/dev/null
   clear
   echo "Configure Backup Settings:"
   echo "1) NAS IP/Hostname         (Current: $NAS_IP)"
