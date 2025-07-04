@@ -109,37 +109,30 @@ if [[ $EUID -ne 0 ]]; then
   exit 1
 fi
 
+update_value() {
+  local file="$1"
+  local key="$2"
+  local value="$3"
+  if [[ -z "$key" || -z "$value" ]]; then
+    echo "[ERROR] Key or value is empty"
+    exit 1
+  fi
+  if grep -q "^$key=" "$file"; then
+    sed -i "s|^$key=.*|$key=$value|" "$file"
+  else
+    echo "$key=$value" >> "$file"
+  fi
+}
+
 case "$1" in
   set_config)
-    KEY="$2"
-    VALUE="$3"
-    if [[ -z "$KEY" || -z "$VALUE" ]]; then
-      echo "Usage: \$0 set_config <KEY> <VALUE>"
-      exit 1
-    fi
-    if grep -q "^\$KEY=" "\$CONFIG_FILE"; then
-      sed -i "s|^\$KEY=.*|\$KEY=\$VALUE|" "\$CONFIG_FILE"
-    else
-      echo "\$KEY=\$VALUE" >> "\$CONFIG_FILE"
-    fi
+    update_value "$CONFIG_FILE" "$2" "$3"
     ;;
-
   set_cred)
-    KEY="$2"
-    VALUE="$3"
-    if [[ -z "$KEY" || -z "$VALUE" ]]; then
-      echo "Usage: \$0 set_cred <KEY> <VALUE>"
-      exit 1
-    fi
-    if grep -q "^\$KEY=" "\$CREDS_FILE"; then
-      sed -i "s|^\$KEY=.*|\$KEY=\$VALUE|" "\$CREDS_FILE"
-    else
-      echo "\$KEY=\$VALUE" >> "\$CREDS_FILE"
-    fi
+    update_value "$CREDS_FILE" "$2" "$3"
     ;;
-
   *)
-    echo "Usage: \$0 {set_config|set_cred} <KEY> <VALUE>"
+    echo "Usage: $0 {set_config|set_cred} <KEY> <VALUE>"
     exit 1
     ;;
 esac
