@@ -16,9 +16,8 @@ mkdir -p "$MOUNT_POINT"
 # Add system-wide backup UI autostart
 sudo tee /etc/profile.d/pi-backup.sh > /dev/null << 'EOF'
 #!/bin/bash
-if [[ -n "$SSH_TTY" && -f /opt/Pi-Backup-Installer/main.sh ]]; then
+if [[ -n "$SSH_TTY" && -z "$SKIP_BACKUP_UI" && -f /opt/Pi-Backup-Installer/main.sh ]]; then
   /opt/Pi-Backup-Installer/main.sh
-  exit
 fi
 EOF
 
