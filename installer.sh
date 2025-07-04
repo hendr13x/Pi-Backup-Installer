@@ -1,26 +1,40 @@
 #!/bin/bash
 
 INSTALL_DIR="/opt/Pi-Backup-Installer"
+CONFIG_FILE="$INSTALL_DIR/config/settings.conf"
+CREDS_FILE="$INSTALL_DIR/credentials/nas_creds"
+MOUNT_POINT="/mnt/backup_nas"
 
-# Detect Architecture
-ARCH=$(uname -m)
-case "$ARCH" in
-  x86_64) ARCH="amd64" ;;
-  aarch64) ARCH="arm64" ;;
-  armv7l) ARCH="armhf" ;;
-  *) echo "Unknown architecture: $ARCH"; exit 1 ;;
-esac
-echo "Detected architecture: $ARCH"
+mkdir -p "$MOUNT_POINT"
 
-# Install dependencies
-sudo apt-get update
-sudo apt-get install git cifs-utils -y
+# Load NAS config values
+if [[ -f "$CONFIG_FILE" ]]; then
+  source "$CONFIG_FILE"
+  if ! mount -t cifs "//${NAS_IP}/${NAS_SHARE}" "$MOUNT_POINT" -o credentials="$CREDS_FILE",vers=3.0 2>/dev/null; then
+    echo -e "\n[WARNING] Could not connect to NAS at //${NAS_IP}/${NAS_SHARE}. Backup UI will still load.\n"
+  fi
+else
+  echo -e "\n[WARNING] Missing NAS config. Skipping NAS mount attempt.\n"
+fi
 
-# Create config and credentials directories if missing
+# Add backup-ui autostart to .bashrc with session guard
+if ! grep -q "## backup-ui-start" "$HOME/.bashrc"; then
+cat << EOF >> "$HOME/.bashrc"
+
+## backup-ui-start
+if [[ -n "\$SSH_TTY" && -z "\$BACKUP_UI_SHOWN" ]]; then
+  export BACKUP_UI_SHOWN=1
+  /opt/Pi-Backup-Installer/main.sh
+fi
+## backup-ui-end
+EOF
+fi
+
+# Ensure required directories exist
 sudo mkdir -p "$INSTALL_DIR/config"
 sudo mkdir -p "$INSTALL_DIR/credentials"
 
-# If settings.conf missing, create default
+# Create default settings.conf if missing
 if [[ ! -f "$INSTALL_DIR/config/settings.conf" ]]; then
   sudo tee "$INSTALL_DIR/config/settings.conf" > /dev/null << EOF
 NAS_IP=192.168.1.100
@@ -32,7 +46,7 @@ AUTO_BACKUP_SCHEDULE=daily
 EOF
 fi
 
-# If nas_creds missing, create default (empty password)
+# Create default nas_creds if missing
 if [[ ! -f "$INSTALL_DIR/credentials/nas_creds" ]]; then
   sudo tee "$INSTALL_DIR/credentials/nas_creds" > /dev/null << EOF
 username=admin
@@ -40,11 +54,12 @@ password=YourPasswordHere
 EOF
 fi
 
-# Set secure permissions on credentials file automatically
+# Set secure permissions on credentials
 sudo chmod 600 "$INSTALL_DIR/credentials/nas_creds"
 
-# Ensure NAS mount point exists
-sudo mkdir -p /mnt/backup_nas
+# Install dependencies
+sudo apt-get update
+sudo apt-get install git cifs-utils -y
 
 # Ask for Kiauh install
 read -rp "Install Kiauh? (y/n): " install_kiauh
@@ -60,10 +75,10 @@ if [[ "$install_kiauh" =~ ^[Yy]$ ]]; then
   fi
 fi
 
-# Set script permissions
+# Set permissions
 sudo chmod +x "$INSTALL_DIR"/*.sh
 
-# Add passwordless sudo rule for backup script
+# Add passwordless sudo rule
 if sudo -n true 2>/dev/null; then
   echo "$(whoami) ALL=(ALL) NOPASSWD: $INSTALL_DIR/backup_sdcard.sh" | sudo tee /etc/sudoers.d/sdcard-backup > /dev/null
   sudo chmod 0440 /etc/sudoers.d/sdcard-backup
@@ -71,33 +86,10 @@ else
   echo "⚠️  Sudo access is required to install passwordless rules. Skipping."
 fi
 
-# Setup SSH login UI in .bashrc
-if ! grep -q "## backup-ui-start" "$HOME/.bashrc"; then
-cat << EOF >> "$HOME/.bashrc"
-
-## backup-ui-start
-if [[ -n "\$SSH_TTY" ]]; then
-  /opt/Pi-Backup-Installer/main.sh
-  # exit  # Commented to allow MOTD + terminal after quitting menu
-fi
-## backup-ui-end
-EOF
-fi
-
-
-
-# Show Armbian welcome message after install
+# Trigger MOTD after install if available
 if [[ -x /etc/update-motd.d/30-armbian-sysinfo ]]; then
   /etc/update-motd.d/30-armbian-sysinfo
 fi
 
-# Restore MOTD components if missing or disabled
-if [[ -x /usr/lib/update-notifier/update-motd-updates-available ]]; then
-  sudo ln -sf /usr/lib/update-notifier/update-motd-updates-available /etc/update-motd.d/90-updates-available
-fi
-
-if [[ -f /etc/update-motd.d/10-uname ]]; then
-  sudo chmod +x /etc/update-motd.d/10-uname
-fi
-
 echo "✅ Installation complete. Reconnect via SSH to see the menu."
+exit 0
