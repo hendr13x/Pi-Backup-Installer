@@ -52,7 +52,9 @@ fi
 # Set group and permissions
 sudo chown -R root:"$BACKUP_GROUP" "$INSTALL_DIR"
 sudo chmod -R 775 "$INSTALL_DIR"
+sudo chgrp "$BACKUP_GROUP" "$CONFIG_FILE"
 sudo chmod 664 "$CONFIG_FILE"
+sudo chgrp "$BACKUP_GROUP" "$CREDS_FILE"
 sudo chmod 660 "$CREDS_FILE"
 
 # Add current user to group
