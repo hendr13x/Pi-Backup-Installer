@@ -66,7 +66,7 @@ for u in $(ls /home); do
   sudo usermod -aG "$BACKUP_GROUP" "$u"
 done
 sudo usermod -aG "$BACKUP_GROUP" root
-echo "🔄 Please log out and back in to apply group membership changes.""
+echo "🔄 Please log out and back in to apply group membership changes."
 
 # Install dependencies
 sudo apt-get update
@@ -83,19 +83,31 @@ else
   sudo git clone https://github.com/hendr13x/Pi-Backup-Installer.git "$INSTALL_DIR"
 fi
 
-# Ask for Kiauh install
-read -rp "Install Kiauh? (y/n): " install_kiauh
-if [[ "$install_kiauh" =~ ^[Yy]$ ]]; then
-  if [[ -d "$HOME/kiauh" ]]; then
-    echo "⚠️  KIAUH already exists at \$HOME/kiauh. Skipping clone."
-  else
-    if git clone https://github.com/dw-0/kiauh.git "$HOME/kiauh"; then
-      echo "✅ KIAUH successfully installed."
-    else
-      echo "❌ Failed to clone KIAUH. Check your network connection."
-    fi
-  fi
-fi
+# Prompt to install Kiauh
+while true; do
+  echo -n "Install Kiauh? (y/n): "
+  read install_kiauh
+  case "$install_kiauh" in
+    [Yy]*)
+      if [[ -d "$HOME/kiauh" ]]; then
+        echo "⚠️  KIAUH already exists at \$HOME/kiauh. Skipping clone."
+      else
+        if git clone https://github.com/dw-0/kiauh.git "$HOME/kiauh"; then
+          echo "✅ KIAUH successfully installed."
+        else
+          echo "❌ Failed to clone KIAUH. Check your network connection."
+        fi
+      fi
+      break
+      ;;
+    [Nn]*)
+      break
+      ;;
+    *)
+      echo "Please answer y or n."
+      ;;
+  esac
+done
 
 # Write the config writer script
 sudo tee "$INSTALL_DIR/write_config.sh" > /dev/null << 'EOF'
