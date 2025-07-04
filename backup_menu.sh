@@ -52,18 +52,21 @@ show_backup_config_menu() {
   done
 }
 
-echo
-echo "SD Card Backup Utility"
-echo "------------------------"
-echo "1) Run Manual Backup Now"
-echo "2) Configure Backup Settings"
-echo "q) Return to Main Menu"
-echo
-read -rp "Select option: " bchoice
+while true; do
+  echo
+  echo "SD Card Backup Utility"
+  echo "------------------------"
+  echo "1) Run Manual Backup Now"
+  echo "2) Configure Backup Settings"
+  echo "q) Return to Main Menu"
+  echo
+  read -rp "Select option: " bchoice
 
-case "$bchoice" in
-  1) "$INSTALL_DIR/backup_sdcard.sh" ;;
-  2) show_backup_config_menu ;;
-  q|Q) ;;
-  *) echo "Invalid"; sleep 1 ;;
-esac
+  case "$bchoice" in
+    1) "$INSTALL_DIR/backup_sdcard.sh" ;;
+    2) show_backup_config_menu ;;
+    q|Q) break ;;
+    *) echo "Invalid"; sleep 1 ;;
+  esac
+done
+
