@@ -50,15 +50,21 @@ EOF
 fi
 
 # Set group and permissions
+# Ensure group ownership and permissions are enforced recursively
 sudo chown -R root:"$BACKUP_GROUP" "$INSTALL_DIR"
 sudo chmod -R 775 "$INSTALL_DIR"
+# Ensure directories retain group ownership on new files
+sudo find "$INSTALL_DIR" -type d -exec chmod g+s {} +
 sudo chgrp "$BACKUP_GROUP" "$CONFIG_FILE"
+sudo chmod g+w "$CONFIG_FILE"
 sudo chmod 664 "$CONFIG_FILE"
 sudo chgrp "$BACKUP_GROUP" "$CREDS_FILE"
+sudo chmod g+w "$CREDS_FILE"
 sudo chmod 660 "$CREDS_FILE"
 
 # Add current user to group
 sudo usermod -aG "$BACKUP_GROUP" "$USER"
+echo "🔄 Please log out and back in to apply group membership changes."
 
 # Install dependencies
 sudo apt-get update
