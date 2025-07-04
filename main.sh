@@ -42,3 +42,5 @@ show_main_menu
 if [[ -f /etc/update-motd.d/30-armbian-sysinfo ]]; then
   /etc/update-motd.d/30-armbian-sysinfo
 fi
+
+exit 0

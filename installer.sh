@@ -49,35 +49,42 @@ sudo mkdir -p /mnt/backup_nas
 # Ask for Kiauh install
 read -rp "Install Kiauh? (y/n): " install_kiauh
 if [[ "$install_kiauh" =~ ^[Yy]$ ]]; then
-  git clone https://github.com/dw-0/kiauh.git "$HOME/kiauh"
+  if [[ -d "$HOME/kiauh" ]]; then
+    echo "⚠️  KIAUH already exists at \$HOME/kiauh. Skipping clone."
+  else
+    if git clone https://github.com/dw-0/kiauh.git "$HOME/kiauh"; then
+      echo "✅ KIAUH successfully installed."
+    else
+      echo "❌ Failed to clone KIAUH. Check your network connection."
+    fi
+  fi
 fi
 
 # Set script permissions
 sudo chmod +x "$INSTALL_DIR"/*.sh
 
 # Add passwordless sudo rule for backup script
-echo "$(whoami) ALL=(ALL) NOPASSWD: $INSTALL_DIR/backup_sdcard.sh" | sudo tee /etc/sudoers.d/sdcard-backup > /dev/null
-sudo chmod 0440 /etc/sudoers.d/sdcard-backup
+if sudo -n true 2>/dev/null; then
+  echo "$(whoami) ALL=(ALL) NOPASSWD: $INSTALL_DIR/backup_sdcard.sh" | sudo tee /etc/sudoers.d/sdcard-backup > /dev/null
+  sudo chmod 0440 /etc/sudoers.d/sdcard-backup
+else
+  echo "⚠️  Sudo access is required to install passwordless rules. Skipping."
+fi
 
 # Setup SSH login UI in .bashrc
 if ! grep -q "## backup-ui-start" "$HOME/.bashrc"; then
 cat << EOF >> "$HOME/.bashrc"
 
 ## backup-ui-start
-if [[ -n "$SSH_TTY" ]]; then
+if [[ -n "\$SSH_TTY" ]]; then
   /opt/Pi-Backup-Installer/main.sh
-  echo -e "\n=========================="
-echo -e "Returning to terminal..."
-echo -e "=========================="
-  sleep 1
-  if [[ -f /etc/update-motd.d/30-armbian-sysinfo ]]; then
-    /etc/update-motd.d/30-armbian-sysinfo
-  fi
   # exit  # Commented to allow MOTD + terminal after quitting menu
 fi
 ## backup-ui-end
 EOF
 fi
+
+
 
 # Show Armbian welcome message after install
 if [[ -x /etc/update-motd.d/30-armbian-sysinfo ]]; then
