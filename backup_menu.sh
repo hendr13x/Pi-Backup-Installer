@@ -36,7 +36,7 @@ show_backup_config_menu() {
     read -rp "Select option: " opt
     case $opt in
       1) read -rp "New NAS IP: " v; sed -i "s/^NAS_IP=.*/NAS_IP=$v/" "$CONFIG_FILE" ;;
-      2) read -rp "New Share: " v; sed -i "s/^NAS_SHARE=.*/NAS_SHARE=$v/" "$CONFIG_FILE" ;;
+      2) read -rp "New Share: " v; v_escaped="${v//\\/\\\\}"; sed -i "s|^NAS_SHARE=.*|NAS_SHARE=$v_escaped|" "$CONFIG_FILE" ;;
       3) read -rp "New Username: " v; sed -i "s/^username=.*/username=$v/" "$CREDS_FILE" ;;
       4) read -rp "New Password: " v; sed -i "s/^password=.*/password=$v/" "$CREDS_FILE" || echo "password=$v" >> "$CREDS_FILE" ;;
       5) read -rp "Max backups to keep: " v; sed -i "s/^MAX_BACKUPS=.*/MAX_BACKUPS=$v/" "$CONFIG_FILE" ;;
