@@ -3,11 +3,11 @@
 INSTALL_DIR="/opt/Pi-Backup-Installer"
 CONFIG_FILE="$INSTALL_DIR/config/settings.conf"
 CREDS_FILE="$INSTALL_DIR/credentials/nas_creds"
-source "$CONFIG_FILE" 2>/dev/null
-source "$CREDS_FILE" 2>/dev/null
 
 function configure_settings() {
   while true; do
+    unset NAS_IP NAS_SHARE MAX_BACKUPS AUTO_BACKUP_ENABLED AUTO_BACKUP_SCHEDULE BACKUP_BASENAME
+    unset username password
     source "$CONFIG_FILE" 2>/dev/null
     source "$CREDS_FILE" 2>/dev/null
     clear
