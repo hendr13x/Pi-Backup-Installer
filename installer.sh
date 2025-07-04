@@ -24,7 +24,11 @@ cat << 'EOF' >> "$HOME/.bashrc"
 ## backup-ui-start
 if [[ -n "$SSH_TTY" && -z "$BACKUP_UI_SHOWN" ]]; then
   export BACKUP_UI_SHOWN=1
-  /opt/Pi-Backup-Installer/main.sh
+  if [[ -f /opt/Pi-Backup-Installer/main.sh ]]; then
+    /opt/Pi-Backup-Installer/main.sh
+  else
+    echo "⚠️  Warning: Pi Backup UI not found at /opt/Pi-Backup-Installer/main.sh"
+  fi
   exit
 fi
 ## backup-ui-end
@@ -60,6 +64,14 @@ sudo chmod 600 "$INSTALL_DIR/credentials/nas_creds"
 
 # Install dependencies
 sudo apt-get update
+
+# Clone Pi-Backup-Installer if not already present
+if [[ ! -f "$INSTALL_DIR/main.sh" ]]; then
+  echo "Cloning Pi-Backup-Installer source files into $INSTALL_DIR..."
+  sudo git clone https://github.com/hendr13x/Pi-Backup-Installer.git "$INSTALL_DIR"
+else
+  echo "Pi-Backup-Installer already exists at $INSTALL_DIR"
+fi
 sudo apt-get install git cifs-utils -y
 
 # Ask for Kiauh install
