@@ -26,7 +26,7 @@ show_backup_config_menu() {
     clear
     echo "Configure Backup Settings:"
     echo "1) NAS IP/Hostname         (Current: $NAS_IP)"
-    echo "2) NAS Share               (Current: $NAS_SHARE)"
+    echo "2) NAS Share               (Current: ${NAS_SHARE//\\/\\\\})"
     echo "3) NAS Username            (Current: $NAS_USER)"
     echo "4) NAS Password            (Stored)"
     echo "5) Max Backups to Keep     (Current: $MAX_BACKUPS; Saved: $backup_count)"
@@ -69,4 +69,3 @@ while true; do
     *) echo "Invalid"; sleep 1 ;;
   esac
 done
-
