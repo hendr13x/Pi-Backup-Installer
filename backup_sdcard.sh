@@ -10,14 +10,26 @@ MOUNT_DIR="/mnt/backup_nas"
 mkdir -p "$MOUNT_DIR"
 mkdir -p "$INSTALL_DIR/backups"
 
-source "$CONFIG"
+# Load configuration
+if [[ ! -f "$CONFIG_FILE" ]]; then
+  echo "[ERROR] Missing config file at $CONFIG_FILE"
+  exit 1
+fi
+if [[ ! -f "$CREDS_FILE" ]]; then
+  echo "[ERROR] Missing credentials file at $CREDS_FILE"
+  exit 1
+fi
+
+source "$CONFIG_FILE"
+source "$CREDS_FILE"
+
 MAX_BACKUPS=${MAX_BACKUPS:-5}
 TIMESTAMP=$(date +"%Y-%m-%d_%H-%M")
 IMG_NAME="sd_backup_$TIMESTAMP.img.gz"
 LOG_FILE="$INSTALL_DIR/backups/backup_$TIMESTAMP.log"
 
 echo "[INFO] Mounting NAS..." | tee "$LOG_FILE"
-if ! mount -t cifs "//${NAS_IP}/${NAS_SHARE}" "$MOUNT_DIR" -o credentials="$CREDS",vers=3.0; then
+if ! mount -t cifs "//${NAS_IP}/${NAS_SHARE}" "$MOUNT_DIR" -o credentials="$CREDS_FILE",vers=3.0; then
   echo "[ERROR] Mount failed." | tee -a "$LOG_FILE"
   exit 1
 fi
