@@ -59,17 +59,34 @@ sudo chmod +x "$INSTALL_DIR"/*.sh
 echo "$(whoami) ALL=(ALL) NOPASSWD: $INSTALL_DIR/backup_sdcard.sh" | sudo tee /etc/sudoers.d/sdcard-backup > /dev/null
 sudo chmod 0440 /etc/sudoers.d/sdcard-backup
 
-# Setup SSH login UI
+# Setup SSH login UI in .bashrc
 if ! grep -q "## backup-ui-start" "$HOME/.bashrc"; then
 cat << EOF >> "$HOME/.bashrc"
 
 ## backup-ui-start
 if [[ -n "\$SSH_TTY" ]]; then
-  $INSTALL_DIR/main.sh
-  exit
+  /opt/Pi-Backup-Installer/main.sh
+  # exit  # Commented to allow MOTD + terminal after quitting menu
 fi
 ## backup-ui-end
 EOF
+fi
+
+# Show Armbian welcome message after install
+if [[ -x /etc/update-motd.d/30-armbian-sysinfo ]]; then
+  /etc/update-motd.d/30-armbian-sysinfo
+fi
+
+# Restore MOTD components if missing or disabled
+if [[ -x /usr/lib/update-notifier/update-motd-updates-available ]]; then
+  sudo ln -sf /usr/lib/update-notifier/update-motd-updates-available /etc/update-motd.d/90-updates-available
+fi
+
+if [[ -f /etc/update-motd.d/10-uname ]]; then
+  sudo chmod +x /etc/update-motd.d/10-uname
+fi
+if [[ -f /etc/update-motd.d/30-armbian-sysinfo ]]; then
+  /etc/update-motd.d/30-armbian-sysinfo
 fi
 
 echo "✅ Installation complete. Reconnect via SSH to see the menu."

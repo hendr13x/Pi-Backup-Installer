@@ -37,3 +37,8 @@ show_main_menu() {
 }
 
 show_main_menu
+
+# Show Armbian welcome message again after menu exit
+if [[ -f /etc/update-motd.d/30-armbian-sysinfo ]]; then
+  /etc/update-motd.d/30-armbian-sysinfo
+fi
