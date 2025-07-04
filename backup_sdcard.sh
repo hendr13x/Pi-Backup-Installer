@@ -1,6 +1,15 @@
 #!/bin/bash
 
 # Re-run as sudo if not root
+
+# Cleanup on exit
+cleanup() {
+  if mountpoint -q "$MOUNT_DIR"; then
+    echo "[CLEANUP] Unmounting NAS..." | tee -a "$LOG_FILE"
+    umount "$MOUNT_DIR"
+  fi
+}
+trap cleanup EXIT
 [[ $EUID -ne 0 ]] && exec sudo "$0" "$@"
 
 INSTALL_DIR="/opt/Pi-Backup-Installer"
@@ -25,10 +34,12 @@ source "$CREDS_FILE"
 
 MAX_BACKUPS=${MAX_BACKUPS:-5}
 TIMESTAMP=$(date +"%Y-%m-%d_%H-%M")
-IMG_NAME="sd_backup_$TIMESTAMP.img.gz"
+BASE_NAME=${BACKUP_BASENAME:-sd_backup}
+IMG_NAME="${BASE_NAME}_$TIMESTAMP.img.gz"
 LOG_FILE="$INSTALL_DIR/backups/backup_$TIMESTAMP.log"
 
-echo "[INFO] Mounting NAS..." | tee "$LOG_FILE"
+echo -e "
+[INFO] Mounting NAS..." | tee "$LOG_FILE"
 if mountpoint -q "$MOUNT_DIR"; then
   echo "[INFO] NAS already mounted at $MOUNT_DIR" | tee -a "$LOG_FILE"
 else
@@ -38,20 +49,30 @@ else
   fi
 fi
 
-echo "[INFO] Backing up /dev/mmcblk0..." | tee -a "$LOG_FILE"
-dd if=/dev/mmcblk0 bs=4M status=progress conv=fsync 2>>"$LOG_FILE" | gzip > "$MOUNT_DIR/$IMG_NAME"
+echo -e "
+[INFO] Starting SD card backup..." | tee -a "$LOG_FILE"
+START_TIME=$(date +%s)
+if ! dd if=/dev/mmcblk0 bs=4M status=progress conv=fsync 2>>"$LOG_FILE" | gzip > "$MOUNT_DIR/$IMG_NAME"; then
+  echo "[ERROR] Backup failed — cleaning up incomplete file." | tee -a "$LOG_FILE"
+  rm -f "$MOUNT_DIR/$IMG_NAME"
+  exit 1
+fi
 
 # Rotate old backups
 backups=( $(ls -tp "$MOUNT_DIR"/*.img.gz 2>/dev/null | grep -v '/$') )
 if (( ${#backups[@]} > MAX_BACKUPS )); then
   for old in "${backups[@]:MAX_BACKUPS}"; do
-    echo "[INFO] Deleting old: $old" | tee -a "$LOG_FILE"
+    echo "[INFO] Rotating out old backup: $(basename "$old")" | tee -a "$LOG_FILE"
     rm -f "$old"
   done
 fi
 
-echo "[INFO] Unmounting NAS..." | tee -a "$LOG_FILE"
-umount "$MOUNT_DIR"
+# Unmounting handled in cleanup trap
 
-echo "[DONE] Backup complete: $IMG_NAME" | tee -a "$LOG_FILE"
+END_TIME=$(date +%s)
+DURATION=$((END_TIME - START_TIME))
+FILE_SIZE=$(du -h "$MOUNT_DIR/$IMG_NAME" | cut -f1)
+echo -e "
+[SUCCESS] Backup completed successfully: $IMG_NAME" | tee -a "$LOG_FILE"
+echo "[INFO] Duration: ${DURATION}s | Size: $FILE_SIZE" | tee -a "$LOG_FILE"
 read -rp "Press Enter to return..."
