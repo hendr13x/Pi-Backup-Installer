@@ -7,15 +7,8 @@ MOUNT_POINT="/mnt/backup_nas"
 
 mkdir -p "$MOUNT_POINT"
 
-# Load NAS config values
-if [[ -f "$CONFIG_FILE" ]]; then
-  source "$CONFIG_FILE"
-  if ! mount -t cifs "//${NAS_IP}/${NAS_SHARE}" "$MOUNT_POINT" -o credentials="$CREDS_FILE",vers=3.0 2>/dev/null; then
-    echo -e "\n[WARNING] Could not connect to NAS at //${NAS_IP}/${NAS_SHARE}. Backup UI will still load.\n"
-  fi
-else
-  echo -e "\n[WARNING] Missing NAS config. Skipping NAS mount attempt.\n"
-fi
+# Defer NAS mount to runtime inside main.sh; avoid doing it during install
+# This avoids errors on first install before configuration is complete
 
 # Add backup-ui autostart to .bashrc with session guard
 if ! grep -q "## backup-ui-start" "$HOME/.bashrc"; then
