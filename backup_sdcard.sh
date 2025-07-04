@@ -3,9 +3,9 @@
 # Re-run as sudo if not root
 [[ $EUID -ne 0 ]] && exec sudo "$0" "$@"
 
-INSTALL_DIR="$HOME/backup-installer"
-CONFIG="$INSTALL_DIR/config/settings.conf"
-CREDS="$INSTALL_DIR/credentials/nas_creds"
+INSTALL_DIR="/opt/Pi-Backup-Installer"
+CONFIG_FILE="$INSTALL_DIR/config/settings.conf"
+CREDS_FILE="$INSTALL_DIR/credentials/nas_creds"
 MOUNT_DIR="/mnt/backup_nas"
 mkdir -p "$MOUNT_DIR"
 mkdir -p "$INSTALL_DIR/backups"
