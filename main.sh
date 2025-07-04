@@ -23,13 +23,25 @@ show_main_menu() {
     echo "Pi Backup Manager"
     echo "-------------------"
     echo "1) Launch SD Card Backup Utility"
-    echo "2) Launch KIAUH (if installed)"
+    if [[ -f "$HOME/kiauh/kiauh.sh" ]]; then
+      echo "2) Launch KIAUH"
+    else
+      echo "2) Install KIAUH"
+    fi
     echo "q) Exit to terminal"
     echo
     read -rp "Select option: " choice
     case "$choice" in
       1) bash "$INSTALL_DIR/backup_menu.sh" ;;
-      2) [[ -f "$HOME/kiauh/kiauh.sh" ]] && bash "$HOME/kiauh/kiauh.sh" || echo "KIAUH not found at ~/kiauh" ;;
+      2)
+        if [[ -f "$HOME/kiauh/kiauh.sh" ]]; then
+          bash "$HOME/kiauh/kiauh.sh"
+        else
+          echo "[INFO] KIAUH not found. Installing to \$HOME/kiauh..."
+          git clone https://github.com/dw-0/kiauh.git "$HOME/kiauh"
+          echo "[INFO] Installation complete. You can now run it with: ./kiauh/kiauh.sh"
+        fi
+        ;;
       q|Q) break ;;
       *) echo "Invalid"; sleep 1 ;;
     esac
@@ -37,7 +49,6 @@ show_main_menu() {
 }
 
 show_main_menu
-
 
 # Show Armbian welcome message again after menu exit
 if [[ -f /etc/update-motd.d/30-armbian-sysinfo ]]; then
