@@ -58,12 +58,15 @@ sudo chmod 600 "$INSTALL_DIR/credentials/nas_creds"
 # Install dependencies
 sudo apt-get update
 
-# Clone Pi-Backup-Installer if not already present
-if [[ ! -d "$INSTALL_DIR" || -z "$(ls -A $INSTALL_DIR 2>/dev/null)" ]]; then
-  echo "Cloning Pi-Backup-Installer source files into $INSTALL_DIR..."
-  sudo git clone https://github.com/hendr13x/Pi-Backup-Installer.git "$INSTALL_DIR"
+# Update or clone Pi-Backup-Installer repo
+if [[ -d "$INSTALL_DIR/.git" ]]; then
+  echo "Updating Pi-Backup-Installer from GitHub..."
+  sudo git -C "$INSTALL_DIR" reset --hard
+  sudo git -C "$INSTALL_DIR" pull
 else
-  echo "Pi-Backup-Installer already exists at $INSTALL_DIR"
+  echo "Cloning Pi-Backup-Installer source files into $INSTALL_DIR..."
+  sudo rm -rf "$INSTALL_DIR"
+  sudo git clone https://github.com/hendr13x/Pi-Backup-Installer.git "$INSTALL_DIR"
 fi
 sudo apt-get install git cifs-utils -y
 
