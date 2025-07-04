@@ -19,12 +19,13 @@ fi
 
 # Add backup-ui autostart to .bashrc with session guard
 if ! grep -q "## backup-ui-start" "$HOME/.bashrc"; then
-cat << EOF >> "$HOME/.bashrc"
+cat << 'EOF' >> "$HOME/.bashrc"
 
 ## backup-ui-start
-if [[ -n "\$SSH_TTY" && -z "\$BACKUP_UI_SHOWN" ]]; then
+if [[ -n "$SSH_TTY" && -z "$BACKUP_UI_SHOWN" ]]; then
   export BACKUP_UI_SHOWN=1
   /opt/Pi-Backup-Installer/main.sh
+  exit
 fi
 ## backup-ui-end
 EOF
