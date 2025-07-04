@@ -42,7 +42,10 @@ show_main_menu() {
           echo "[INFO] Installation complete. You can now run it with: ./kiauh/kiauh.sh"
         fi
         ;;
-      q|Q) break ;;
+      q|Q)
+        clear
+        break
+        ;;
       *) echo "Invalid"; sleep 1 ;;
     esac
   done
