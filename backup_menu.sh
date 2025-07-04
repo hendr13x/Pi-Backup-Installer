@@ -15,6 +15,7 @@ NAS_USER=admin
 MAX_BACKUPS=5
 AUTO_BACKUP_ENABLED=no
 AUTO_BACKUP_SCHEDULE=daily
+BACKUP_BASENAME=sd_backup
 EOF
 fi
 
@@ -31,6 +32,7 @@ show_backup_config_menu() {
     echo "4) NAS Password            (Stored)"
     echo "5) Max Backups to Keep     (Current: $MAX_BACKUPS; Saved: $backup_count)"
     echo "6) Automatic Backups       (Enabled: $AUTO_BACKUP_ENABLED; Schedule: $AUTO_BACKUP_SCHEDULE)"
+    echo "7) Backup Filename Prefix  (Current: ${BACKUP_BASENAME:-sd_backup})"
     echo "q) Return to Backup Menu"
     echo
     read -rp "Select option: " opt
@@ -45,6 +47,14 @@ show_backup_config_menu() {
         read -rp "Schedule (daily/weekly): " sch
         sed -i "s/^AUTO_BACKUP_ENABLED=.*/AUTO_BACKUP_ENABLED=$en/" "$CONFIG_FILE"
         sed -i "s/^AUTO_BACKUP_SCHEDULE=.*/AUTO_BACKUP_SCHEDULE=$sch/" "$CONFIG_FILE"
+        ;;
+      7)
+        read -rp "New backup filename prefix: " v
+        if grep -q '^BACKUP_BASENAME=' "$CONFIG_FILE"; then
+          sed -i "s/^BACKUP_BASENAME=.*/BACKUP_BASENAME=$v/" "$CONFIG_FILE"
+        else
+          echo "BACKUP_BASENAME=$v" >> "$CONFIG_FILE"
+        fi
         ;;
       q|Q) break ;;
       *) echo "Invalid"; sleep 1 ;;
